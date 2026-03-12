@@ -1,0 +1,261 @@
+================================================================================
+              CROSS-PAGE NAVIGATION & GRAPH EXPANSION - SUMMARY
+================================================================================
+
+Date: December 19, 2025
+Task: Implement cross-page query passing and graph expansion functionality
+
+================================================================================
+                          FEATURES IMPLEMENTED
+================================================================================
+
+1. SEARCH PAGE → GRAPH PAGE NAVIGATION
+   ----------------------------------------
+   Location: public/js/search.js
+   
+   Feature: "View Knowledge Graph" button appears after search results
+   - Automatically passes the search query to the graph page via URL parameter
+   - Graph page auto-builds the graph when navigated from search page
+   - Button styled with gradient background for visual prominence
+   
+   User Flow:
+   1. User searches on search page
+   2. Results are displayed
+   3. "View Knowledge Graph for [query]" button appears at bottom
+   4. Clicking navigates to graph.html?q=[encoded_query]
+   5. Graph page automatically builds graph for that query
+
+2. GRAPH PAGE AUTO-LOAD FROM URL
+   --------------------------------
+   Location: public/js/graph.js
+   
+   Feature: Graph page reads URL parameters and auto-builds graph
+   - Checks for 'q' parameter (query from search or chat page)
+   - Checks for 'graphData' parameter (pre-built graph from chat page)
+   - Auto-populates search input with query
+   - Automatically triggers graph building
+   - Updates browser URL when building new graphs
+   
+   URL Formats Supported:
+   - /graph.html?q=machine%20learning
+   - /graph.html?graphData=[encoded_json]
+
+3. CHAT PAGE GRAPH EXPANSION
+   ---------------------------
+   Location: public/chat.html, public/js/chat.js
+   
+   Feature: "Expand" button in chat graph sidebar
+   - Button appears when graph is successfully loaded
+   - Clicking navigates to full-page graph view
+   - Passes current question as URL parameter
+   - Graph page rebuilds the graph in full-screen mode
+   
+   User Flow:
+   1. User asks question on chat page with "Include Graph" checked
+   2. Graph appears in sidebar
+   3. "Expand" button becomes visible
+   4. Clicking opens graph.html?q=[question]
+   5. Full-page graph view with all controls available
+
+4. CHAT PAGE URL PARAMETER SUPPORT
+   ---------------------------------
+   Location: public/js/chat.js (already existed, enhanced)
+   
+   Feature: Chat page accepts 'q' parameter
+   - Allows direct linking to chat with pre-filled question
+   - Auto-submits question when loaded via URL parameter
+   
+   URL Format:
+   - /chat.html?q=how%20does%20kubernetes%20work
+
+================================================================================
+                          FILES MODIFIED
+================================================================================
+
+1. public/js/search.js
+   - Added "View Graph" button after search results
+   - Button navigates to /graph.html?q=[query]
+   - Styled with .view-graph-section class
+
+2. public/js/graph.js
+   - Added URL parameter detection on page load
+   - Auto-loads graph from 'q' parameter
+   - Auto-loads graph from 'graphData' parameter
+   - Updates browser URL when building graphs (pushState)
+
+3. public/chat.html
+   - Added "Expand" button to graph panel header
+   - Button initially hidden, shows when graph loads
+
+4. public/js/chat.js
+   - Added currentGraphData and currentQuestion variables
+   - Stores graph data and question when asking
+   - Shows/hides expand button based on graph availability
+   - Expand button navigates to /graph.html?q=[question]
+
+5. public/css/search.css
+   - Added .view-graph-section styling
+   - Gradient background (primary-light to primary)
+   - White button with shadow effects
+   - Hover animation (translateY)
+
+================================================================================
+                          TECHNICAL IMPLEMENTATION
+================================================================================
+
+URL PARAMETER HANDLING
+----------------------
+JavaScript URLSearchParams API used for reading/writing URL parameters:
+
+```javascript
+// Reading parameters
+const urlParams = new URLSearchParams(window.location.search);
+const query = urlParams.get('q');
+
+// Writing parameters (without page reload)
+const newUrl = new URL(window.location);
+newUrl.searchParams.set('q', query);
+window.history.pushState({}, '', newUrl);
+
+// Encoding for URL
+const encoded = encodeURIComponent(query);
+```
+
+CROSS-PAGE DATA FLOW
+--------------------
+1. Search Page → Graph Page:
+   - Query string passed via URL parameter
+   - Graph page fetches data from API
+
+2. Chat Page → Graph Page:
+   - Query string passed via URL parameter
+   - Graph page fetches data from API
+   - (Alternative: Could pass graph data directly, but query is simpler)
+
+STATE MANAGEMENT
+----------------
+- currentGraphData: Stores graph object in chat.js
+- currentQuestion: Stores current question in chat.js
+- Both used to enable expand functionality
+
+BUTTON VISIBILITY
+-----------------
+- Expand button starts hidden (display: none)
+- Shows when graph successfully loads (display: inline-block)
+- Hides when new question asked (before loading)
+
+================================================================================
+                          USER EXPERIENCE FLOW
+================================================================================
+
+SCENARIO 1: Search → Graph
+---------------------------
+1. User searches "machine learning algorithms"
+2. Search results appear with papers
+3. Scroll to bottom, see "View Knowledge Graph" button
+4. Click button
+5. Navigate to graph page with query pre-filled
+6. Graph automatically builds and displays
+7. User can explore full-page graph with all controls
+
+SCENARIO 2: Chat → Graph Expansion
+-----------------------------------
+1. User asks "How does Kubernetes work?" with graph enabled
+2. Answer appears with summary and papers
+3. Small graph appears in sidebar
+4. User sees "Expand" button next to threshold control
+5. Click expand
+6. Navigate to graph page with full-screen view
+7. Same query, larger canvas, more exploration tools
+
+SCENARIO 3: Direct Graph Link
+------------------------------
+1. User shares link: /graph.html?q=blockchain%20security
+2. Recipient clicks link
+3. Graph page loads with query pre-filled
+4. Graph automatically builds
+5. No manual input needed
+
+================================================================================
+                          BENEFITS
+================================================================================
+
+1. SEAMLESS NAVIGATION
+   - No need to re-type queries
+   - Smooth transition between pages
+   - Preserves user context
+
+2. IMPROVED DISCOVERABILITY
+   - Search results naturally lead to graph exploration
+   - Chat users can expand small graphs easily
+   - Visual call-to-action buttons
+
+3. BETTER UX
+   - Less friction in workflow
+   - Auto-loading saves clicks
+   - Full-screen graph for detailed analysis
+
+4. SHAREABLE LINKS
+   - URL parameters enable link sharing
+   - Direct access to specific queries
+   - Bookmarkable graph views
+
+5. PROGRESSIVE DISCLOSURE
+   - Start with search/chat (simple)
+   - Expand to graph when needed (complex)
+   - User controls depth of exploration
+
+================================================================================
+                          TESTING CHECKLIST
+================================================================================
+
+Test Search → Graph:
+[ ] Search for a query on search page
+[ ] Verify "View Graph" button appears
+[ ] Click button
+[ ] Verify navigation to graph page
+[ ] Verify query is pre-filled
+[ ] Verify graph auto-builds
+
+Test Chat → Graph:
+[ ] Ask question with "Include Graph" checked
+[ ] Verify graph appears in sidebar
+[ ] Verify "Expand" button is visible
+[ ] Click expand button
+[ ] Verify navigation to graph page
+[ ] Verify graph builds for same query
+
+Test Direct URL:
+[ ] Navigate to /graph.html?q=test%20query
+[ ] Verify query appears in input
+[ ] Verify graph auto-builds
+
+Test URL Updates:
+[ ] Build graph on graph page
+[ ] Check browser URL updates
+[ ] Use back button
+[ ] Verify state preserved
+
+Test Edge Cases:
+[ ] Empty query parameter
+[ ] Special characters in query
+[ ] Very long query
+[ ] Graph with no results
+
+================================================================================
+                          FUTURE ENHANCEMENTS
+================================================================================
+
+Potential Improvements:
+1. Pass graph data directly (avoid re-fetching)
+2. Preserve threshold settings across pages
+3. Add "Back to Search" button on graph page
+4. Show loading indicator during auto-build
+5. Add animation when transitioning
+6. Store recent queries in localStorage
+7. Add "Share Graph" button with copy link
+8. Support multiple graph views (tabs)
+
+================================================================================
+                          END OF SUMMARY
+================================================================================

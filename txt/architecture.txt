@@ -1,0 +1,637 @@
+================================================================================
+                    SEMANTIX - PROJECT ARCHITECTURE REPORT
+================================================================================
+
+Project: Semantix - Semantic Academic Search Platform
+
+Purpose: AI-powered semantic search and knowledge graph application for 
+         exploring academic papers in software engineering, cloud computing,
+         DevOps, and AI/ML domains.
+
+================================================================================
+                          1. EXECUTIVE SUMMARY
+================================================================================
+
+Semantix is a full-stack web application that provides intelligent academic 
+paper search using machine learning, natural language processing, and graph 
+visualization. The system automatically classifies user queries into domain-
+specific intents, searches OpenAlex API, re-ranks results using semantic 
+similarity, and visualizes relationships between papers.
+
+KEY FEATURES:
+- Intent-based query classification (5 categories)
+- Semantic search with transformer embeddings (MiniLM-L6-v2)
+- Real-time re-ranking using cosine similarity
+- Interactive knowledge graph visualization (Cytoscape.js)
+- Self-learning from low-confidence queries
+- Manual training interface for model improvement
+- User authentication and search history tracking
+
+TECHNOLOGY STACK:
+- Backend: Flask 3.0, SQLAlchemy, SQLite
+- ML/AI: sentence-transformers, scikit-learn, PyTorch, FAISS, KeyBERT
+- Data Source: OpenAlex API
+- Frontend: Vanilla JavaScript, Cytoscape.js, Custom CSS
+
+================================================================================
+                          2. SYSTEM ARCHITECTURE
+================================================================================
+
+2.1 ARCHITECTURAL PATTERN
+-------------------------
+Layered architecture with clear separation of concerns:
+
+PRESENTATION LAYER (HTML/CSS/JS)
+    ↕ HTTP/JSON
+API/ROUTING LAYER (Flask Blueprints)
+    ↕ Function Calls
+SERVICE LAYER (Business Logic)
+    ↕ ORM/API Calls
+DATA LAYER (Database + External APIs)
+
+2.2 CORE COMPONENTS
+------------------
+
+Application Entry (app.py):
+- Initializes Flask with static folder (public/)
+- Configures CORS, SQLAlchemy, Flask-Login
+- Registers 5 blueprints: auth, search, chat, graph, train
+- Creates database tables and initializes classifier on startup
+- Runs on 0.0.0.0:5000
+
+Configuration (config.py):
+- SECRET_KEY, DEBUG, DATABASE_URI
+- Model paths: classifier.pkl, vectorizer.pkl, faiss.index
+- Embedding model: sentence-transformers/all-MiniLM-L6-v2
+- Confidence threshold: 0.6 (triggers self-learning)
+- Intent categories: software_engineering, cloud, devops, ai_ml, general
+
+================================================================================
+                          3. DATABASE ARCHITECTURE
+================================================================================
+
+7 SQLAlchemy Models:
+
+1. USER - Authentication and profiles
+   - Fields: id, email, name, password_hash, created_at
+   - Methods: set_password(), check_password()
+
+2. TRAININGDATA - Intent classifier training examples
+   - Fields: id, question, intent, source, created_at
+   - Sources: manual, seed (120 examples), learned, batch
+
+3. LEARNEDDATA - Self-learning from low-confidence queries
+   - Fields: id, user_query, inferred_intent, confidence, keywords, 
+     abstract_ids, verified, added_to_training, created_at
+   - Workflow: Extract keywords → Infer intent → Store → Verify → Promote
+
+4. CACHEDARTICLE - Cached OpenAlex papers
+   - Fields: id, openalex_id, title, abstract, authors, publication_year,
+     doi, url, concepts, embedding, created_at, updated_at
+   - Purpose: Reduce API calls, store pre-computed embeddings
+
+5. CONCEPT - Extracted concepts for knowledge graph
+   - Fields: id, name, category, frequency, created_at
+
+6. CONCEPTRELATION - Relationships between concepts
+   - Fields: id, source_id, target_id, weight, relation_type
+
+7. SEARCHHISTORY - Search analytics and tracking
+   - Fields: id, user_id, query, intent, confidence, results_count, created_at
+
+================================================================================
+                          4. SERVICE LAYER
+================================================================================
+
+4.1 CLASSIFIER SERVICE (services/classifier_service.py)
+-------------------------------------------------------
+Purpose: Intent classification using scikit-learn
+
+Architecture:
+- Singleton pattern (single model instance)
+- TF-IDF vectorization (5000 features, 1-2 grams, English stop words)
+- Logistic Regression (LBFGS solver, balanced class weights)
+
+Key Methods:
+- train(texts, labels): Train classifier, 5-fold CV, save to disk
+- predict(text): Returns (intent, confidence)
+- predict_batch(texts): Batch prediction
+- get_all_probabilities(text): Full probability distribution
+- is_confident(confidence): Check if ≥ 0.6 threshold
+
+Model Persistence: models/classifier.pkl (joblib)
+
+4.2 EMBEDDING SERVICE (services/embedding_service.py)
+----------------------------------------------------
+Purpose: Text embeddings and similarity search
+
+Architecture:
+- Singleton pattern
+- sentence-transformers/all-MiniLM-L6-v2 (384 dimensions)
+- FAISS IndexFlatIP for cosine similarity search
+
+Key Methods:
+- embed_text(text): Single text embedding (normalized float32)
+- embed_texts(texts): Batch embedding generation
+- add_to_index(doc_id, embedding): Add to FAISS index
+- search(query_embedding, k): k-nearest neighbors
+- compute_similarity(emb1, emb2): Cosine similarity via dot product
+- rank_by_similarity(): Rank candidates by similarity
+
+FAISS Index: models/faiss.index + models/faiss.index.ids.npy
+
+4.3 OPENALEX SERVICE (services/openalex_service.py)
+--------------------------------------------------
+Purpose: Interface with OpenAlex API
+
+Key Methods:
+- search(query, intent, page, per_page): Search with intent enhancement
+- get_work_by_id(openalex_id): Fetch specific paper
+- get_related_works(openalex_id, limit): Fetch related papers
+- search_with_reranking(): Two-stage retrieval (fetch 50, re-rank to 10)
+
+Intent Enhancement: Adds domain keywords to queries
+- software_engineering: design patterns, testing, architecture
+- cloud: aws, azure, kubernetes, serverless
+- devops: ci/cd, docker, automation
+- ai_ml: neural networks, transformers, deep learning
+
+Abstract Processing: Reconstructs from OpenAlex inverted index
+
+4.4 GRAPH SERVICE (services/graph_service.py)
+--------------------------------------------
+Purpose: Build similarity graphs for Cytoscape.js
+
+Key Methods:
+- build_similarity_graph(): Complete graph from search results
+  * Fetches related works for top 3 primary results
+  * Computes pairwise similarities
+  * Filters edges by threshold (default 0.5)
+  * Returns {nodes, edges, related_rankings, stats}
+- update_threshold(): Dynamic edge filtering
+
+Node Structure: {data: {id, label, title, abstract, authors, year, url, 
+                 similarity, is_primary}, classes: 'primary'|'related'}
+Edge Structure: {data: {id, source, target, weight, label}}
+
+4.5 TRAINING SERVICE (services/training_service.py)
+--------------------------------------------------
+Purpose: Manual training and classifier management
+
+Key Methods:
+- add_training_example(question, intent, source): Add single example
+- add_batch_training(examples): Process multiple examples
+- retrain_classifier(): Train on all data, perform CV, save model
+- initialize_with_seed_data(): Load 120 seed examples
+- get_training_stats(): Breakdown by intent and source
+- export_training_data(): Export as JSON or CSV
+
+Seed Data: 120 examples across 5 categories (25 each for SE/cloud/devops/AI, 
+           20 for general)
+
+4.6 LEARNING SERVICE (services/learning_service.py)
+--------------------------------------------------
+Purpose: Self-learning from low-confidence queries
+
+Key Methods:
+- should_learn(confidence): Returns True if < 0.6
+- learn_from_query(): Extract keywords, infer intent, store
+- _extract_keywords(): KeyBERT (if available) or word frequency
+- _infer_intent(): Keyword matching with scoring
+- verify_learned_example(): User verification/correction
+- _promote_learned_data(): Add to training, retrain after 5 examples
+
+Self-Learning Workflow:
+1. Query confidence < 0.6
+2. Extract keywords from top 3 results
+3. Infer intent from keyword matching
+4. Store in LearnedData table
+5. User reviews on training page
+6. Auto-retrain after 5 verified examples
+
+================================================================================
+                          5. API ROUTING LAYER
+================================================================================
+
+5.1 AUTH ROUTES (/auth)
+-----------------------
+- POST /auth/register: Create account, auto-login
+- POST /auth/login: Authenticate, create session
+- POST /auth/logout: End session (requires auth)
+- GET /auth/me: Current user info
+- PUT /auth/update: Update profile (requires auth)
+
+5.2 SEARCH ROUTES (/api/search)
+-------------------------------
+- POST /api/search/: Main search with re-ranking
+  * Parameters: query, page, per_page, rerank
+  * Returns: {query, intent, confidence, results, total, page}
+- GET /api/search/simple: GET-based search without re-ranking
+- POST /api/search/classify: Classify query only
+- GET /api/search/intents: List intent categories
+- GET /api/search/history: Recent searches
+
+5.3 CHAT ROUTES (/api/chat)
+---------------------------
+- POST /api/chat/ask: Q&A with graph
+  * Parameters: question, include_graph, max_related
+  * Returns: {question, intent, confidence, summary, answers, graph, learned}
+  * Summary: Key points from top 5 abstracts
+- POST /api/chat/quick: Fast Q&A without graph
+- POST /api/chat/feedback: Verify learned query
+- GET /api/chat/stats: Chat and learning statistics
+
+5.4 GRAPH ROUTES (/api/graph)
+-----------------------------
+- POST /api/graph/build: Build similarity graph
+  * Parameters: query, max_related, threshold
+  * Returns: {query, intent, confidence, primary_results, graph}
+- GET /api/graph/related/<id>: Fetch related works
+- GET /api/graph/article/<id>: Fetch article details
+- POST /api/graph/filter: Filter edges by threshold
+- POST /api/graph/expand: Expand node with related works
+
+5.5 TRAIN ROUTES (/api/train)
+-----------------------------
+- POST /api/train/add: Add single training example
+- POST /api/train/batch: Batch upload (JSON or CSV)
+- POST /api/train/retrain: Retrain classifier
+- GET /api/train/data: Paginated training data
+- DELETE /api/train/data/<id>: Delete example
+- GET /api/train/export: Export as JSON or CSV
+- GET /api/train/stats: Training and learning statistics
+- GET /api/train/learned: Pending learned data
+- POST /api/train/learned/<id>/verify: Verify learned example
+- POST /api/train/learned/promote: Force promotion and retrain
+- POST /api/train/reset: Reset classifier (requires confirmation)
+- GET /api/train/intents: List intent categories
+
+================================================================================
+                          6. FRONTEND ARCHITECTURE
+================================================================================
+
+6.1 PAGE STRUCTURE
+-----------------
+
+index.html - Landing Page
+- Hero with search box, quick topic buttons, feature cards
+
+search.html - Search Interface
+- Search box, intent display, re-ranking toggle, results list, sidebar filters
+
+chat.html - Q&A Interface
+- Question textarea, summary section, answer cards, Cytoscape.js graph sidebar
+
+graph.html - Graph Explorer
+- Full-page Cytoscape.js, toolbar (zoom, fit, reset), threshold slider, 
+  layout selector, paper details panel
+
+train.html - Training Interface
+- Add example form, batch upload, training data table, learned data review,
+  statistics dashboard
+
+login.html - Authentication
+- Login and registration forms
+
+6.2 JAVASCRIPT MODULES
+---------------------
+
+main.js - Common functionality (auth state, navigation, utilities)
+search.js - Search page logic (query submission, results rendering)
+chat.js - Q&A page logic (question submission, graph initialization, feedback)
+graph.js - Graph explorer (full-page Cytoscape, layouts, node expansion)
+train.js - Training page (add examples, batch upload, review, retrain)
+auth.js - Authentication (login, registration, validation)
+
+6.3 CYTOSCAPE.JS VISUALIZATION
+------------------------------
+
+Configuration:
+- Layout: cose (force-directed), circle, grid, breadthfirst
+- Node styling: Primary (larger, blue), Related (smaller, gray)
+- Edge styling: Width by similarity, label shows score
+- Interactions: Click node (details), hover (highlight), drag, zoom, pan
+
+================================================================================
+                          7. DATA FLOW WORKFLOWS
+================================================================================
+
+7.1 SEARCH WORKFLOW
+------------------
+User Query → Frontend
+  → POST /api/search/ → ClassifierService.predict()
+  → OpenAlexService.search_with_reranking()
+    → OpenAlex API (fetch 50)
+    → Filter papers with abstracts
+    → EmbeddingService.embed_text(query)
+    → EmbeddingService.embed_texts(abstracts)
+    → EmbeddingService.rank_by_similarity()
+    → Return top 10
+  → Log to SearchHistory
+  → Return JSON to frontend
+  → Display results with intent badge
+
+7.2 Q&A WITH GRAPH WORKFLOW
+--------------------------
+User Question → Frontend
+  → POST /api/chat/ask → ClassifierService.predict()
+  → OpenAlexService.search_with_reranking() → Top 10 papers
+  → If confidence < 0.6: LearningService.learn_from_query()
+    → Extract keywords → Infer intent → Store in LearnedData
+  → If include_graph: GraphService.build_similarity_graph()
+    → Fetch related works → Compute embeddings → Build graph
+  → Generate summary from top 5 abstracts
+  → Log to SearchHistory
+  → Return {summary, answers, graph, learned}
+  → Frontend: Display summary, answers, initialize Cytoscape graph
+
+7.3 SELF-LEARNING WORKFLOW
+-------------------------
+Low Confidence Query (< 0.6)
+  → LearningService.learn_from_query()
+  → Extract keywords (KeyBERT or word frequency + OpenAlex concepts)
+  → Infer intent (keyword matching with scoring)
+  → Store in LearnedData (verified=False)
+  → Check retrain threshold (5 examples)
+  → If threshold reached: Promote verified examples → Retrain
+  → User reviews on training page → Verify/correct → Manual promotion
+
+7.4 TRAINING WORKFLOW
+--------------------
+User Adds Example → POST /api/train/add
+  → TrainingService.add_training_example()
+  → Validate intent → Check duplicate → Add to TrainingData
+User Clicks Retrain → POST /api/train/retrain
+  → TrainingService.retrain_classifier()
+  → Fetch all TrainingData → ClassifierService.train()
+  → TF-IDF vectorization → Logistic Regression → 5-fold CV
+  → Save model → Return metrics
+
+================================================================================
+                          8. MACHINE LEARNING PIPELINE
+================================================================================
+
+8.1 INTENT CLASSIFICATION
+-------------------------
+Training:
+- Data: 120 seed examples + manual additions + promoted learned examples
+- Preprocessing: TF-IDF (5000 features, 1-2 grams, English stop words)
+- Model: Logistic Regression (LBFGS, balanced weights, One-vs-Rest)
+- Validation: 5-fold cross-validation
+- Persistence: models/classifier.pkl (joblib)
+
+Prediction:
+- Input: User query → TF-IDF transform → Logistic Regression
+- Output: (intent, confidence) where confidence = max probability
+
+8.2 SEMANTIC EMBEDDINGS
+-----------------------
+Model: sentence-transformers/all-MiniLM-L6-v2
+- Architecture: BERT-based, 384 dimensions
+- Normalization: L2 normalized for cosine similarity
+- Similarity: Cosine via dot product (normalized vectors)
+
+FAISS Indexing:
+- Index type: IndexFlatIP (Inner Product)
+- Exact search, fast retrieval
+- Persistent storage with ID mapping
+
+8.3 RE-RANKING ALGORITHM
+------------------------
+Two-Stage Retrieval:
+1. First Stage: OpenAlex keyword search (fetch 50)
+2. Second Stage: Semantic re-ranking
+   - Filter papers with abstracts
+   - Generate query and abstract embeddings
+   - Compute cosine similarities
+   - Sort by similarity
+   - Return top 10
+
+8.4 KEYWORD EXTRACTION (SELF-LEARNING)
+--------------------------------------
+Primary: KeyBERT (MMR algorithm, 1-2 grams, top 10)
+Fallback: Word frequency (filter stop words, length > 3, top 10)
+Additional: OpenAlex concepts from papers
+Output: Up to 15 unique keywords
+
+8.5 INTENT INFERENCE (SELF-LEARNING)
+------------------------------------
+Algorithm: Keyword matching with scoring
+- Each intent has 9-15 associated keywords
+- Score each intent by keyword matches
+- Select intent with max score
+- Confidence = score[best] / sum(all scores)
+- Default to ('general', 0.3) if no matches
+
+================================================================================
+                          9. EXTERNAL API INTEGRATION
+================================================================================
+
+9.1 OPENALEX API
+---------------
+Base URL: https://api.openalex.org
+
+Endpoints:
+- GET /works: Search papers (search, page, per_page, select, mailto)
+- GET /works/{id}: Fetch specific paper
+
+Data Format:
+- Inverted Index Abstracts: {"word": [positions]} → Reconstructed
+- Concepts: OpenAlex taxonomy with scores
+- Related Works: List of related paper IDs
+
+Rate Limits:
+- Standard: 10 req/sec
+- Polite pool (with email): 100 req/sec
+
+Caching: Papers cached in CachedArticle table with embeddings
+
+================================================================================
+                          10. SECURITY ARCHITECTURE
+================================================================================
+
+10.1 AUTHENTICATION
+------------------
+- Implementation: Flask-Login (session-based)
+- Password hashing: werkzeug.security (pbkdf2:sha256)
+- Password requirements: Minimum 6 characters
+- Session: Secure cookies, HTTP-only
+
+10.2 API SECURITY
+----------------
+- Authentication required: /auth/logout, /auth/update
+- Public endpoints: All search, chat, graph, train
+- CORS: Enabled for all origins (should restrict in production)
+- Input validation: Email format, password length, intent categories
+
+10.3 POTENTIAL VULNERABILITIES
+------------------------------
+Current Limitations:
+1. No rate limiting on API endpoints
+2. CORS allows all origins
+3. No API authentication/authorization
+4. No input length limits (DoS potential)
+5. No CSRF tokens for API endpoints
+
+Recommendations:
+1. Implement Flask-Limiter for rate limiting
+2. Restrict CORS to specific domains
+3. Add API key authentication
+4. Implement input length limits
+5. Use HTTPS in production
+
+================================================================================
+                          11. PERFORMANCE OPTIMIZATION
+================================================================================
+
+11.1 MODEL LOADING
+-----------------
+- Singleton pattern: Models loaded once at startup
+- Lazy loading: Load on first use
+- Startup time: 1-2 minutes first run (download model), 5-10s subsequent
+
+11.2 EMBEDDING CACHING
+---------------------
+- FAISS index: Pre-computed embeddings, fast search (< 1ms)
+- Database caching: CachedArticle stores embeddings
+- Batch processing: embed_texts() for efficiency
+
+11.3 API OPTIMIZATION
+--------------------
+- OpenAlex: Polite pool email for faster rate limits
+- Re-ranking: Fetch 50, re-rank to 10 (balance recall/latency)
+- Graph building: Limit related works to top 3 primary results
+
+11.4 FRONTEND OPTIMIZATION
+-------------------------
+- Static assets: Served by Flask
+- CDN: Font Awesome, Cytoscape.js
+- Graph rendering: Hardware-accelerated
+- Lazy loading: Graph built on demand
+
+================================================================================
+                          12. SCALABILITY CONSIDERATIONS
+================================================================================
+
+12.1 CURRENT LIMITATIONS
+-----------------------
+- Single-process architecture (Flask dev server)
+- In-memory models (~1-2 GB per process)
+- SQLite database (single writer, no horizontal scaling)
+
+12.2 SCALING STRATEGIES
+----------------------
+Application Server:
+- Deploy with Gunicorn (4-8 workers)
+- Load balancer (Nginx)
+
+Database:
+- Migrate to PostgreSQL
+- Connection pooling
+- Read replicas
+
+Caching Layer:
+- Redis for sessions and FAISS index
+- Memcached for API responses
+
+Model Serving:
+- Separate embedding service (FastAPI)
+- GPU acceleration
+
+Microservices:
+- Separate auth, search, graph, training services
+- API gateway
+
+12.3 PRODUCTION DEPLOYMENT
+-------------------------
+Recommended Stack:
+- Web Server: Nginx
+- App Server: Gunicorn (4-8 workers)
+- Database: PostgreSQL 14+
+- Cache: Redis 6+
+- Monitoring: Prometheus + Grafana
+
+Infrastructure:
+- Container: Docker
+- Orchestration: Kubernetes (optional)
+- Cloud: AWS/GCP/Azure
+
+================================================================================
+                          13. MONITORING & LOGGING
+================================================================================
+
+13.1 CURRENT LOGGING
+-------------------
+- Console output: Model loading, training results, API errors
+- Database logging: SearchHistory (all searches), LearnedData (self-learning)
+
+13.2 RECOMMENDED MONITORING
+--------------------------
+Application Metrics:
+- Request count, response times (p50, p95, p99), error rates
+
+ML Metrics:
+- Classification confidence distribution, re-ranking effectiveness,
+  self-learning trigger rate
+
+System Metrics:
+- CPU, memory, disk I/O, network I/O
+
+Tools:
+- Prometheus (metrics), Grafana (dashboards), ELK Stack (logs), Sentry (errors)
+
+================================================================================
+                          14. FUTURE ENHANCEMENTS
+================================================================================
+
+14.1 FEATURE ENHANCEMENTS
+------------------------
+- Advanced search: Boolean operators, date filtering, author search
+- Personalization: User preferences, recommended papers, bookmarks
+- Collaboration: Share graphs, annotations, team workspaces
+- Analytics: Search trends, popular topics, A/B testing
+
+14.2 ML ENHANCEMENTS
+-------------------
+- Better classification: BERT-based classifier, multi-label, hierarchical
+- Advanced embeddings: Domain-specific models, fine-tuned on papers
+- Improved re-ranking: Learning-to-rank, user feedback incorporation
+- Graph intelligence: Community detection, citation analysis, trend prediction
+
+14.3 TECHNICAL IMPROVEMENTS
+--------------------------
+- Performance: Async API calls, parallel embeddings, query caching
+- Reliability: Circuit breakers, retry logic, graceful degradation
+- Security: API key auth, rate limiting per user, input sanitization
+- Observability: Distributed tracing, request logging, error tracking
+
+================================================================================
+                          15. CONCLUSION
+================================================================================
+
+Semantix is a sophisticated semantic search platform combining machine learning,
+natural language processing, and graph visualization. The architecture follows
+best practices with clear separation of concerns, singleton patterns for 
+resource management, and a comprehensive self-learning system.
+
+KEY STRENGTHS:
+- Clean layered architecture with well-defined responsibilities
+- Effective use of ML (TF-IDF + LogReg for classification, transformers for 
+  embeddings)
+- Innovative self-learning system that improves over time
+- Interactive graph visualization for knowledge discovery
+- Comprehensive API design with RESTful endpoints
+
+AREAS FOR IMPROVEMENT:
+- Production readiness (rate limiting, API auth, HTTPS)
+- Scalability (migrate to PostgreSQL, add caching layer, use Gunicorn)
+- Testing (unit tests, integration tests, E2E tests)
+- Monitoring (structured logging, metrics, alerting)
+- Security hardening (input validation, CSRF protection, CORS restriction)
+
+The project demonstrates strong technical implementation and provides a solid
+foundation for an academic search platform with intelligent features.
+
+================================================================================
+                          END OF REPORT
+================================================================================

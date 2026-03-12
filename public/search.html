@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Search - Semantix</title>
+    <link rel="stylesheet" href="/css/style.css" />
+    <link rel="stylesheet" href="/css/search.css" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+  </head>
+  <body>
+    <nav class="navbar">
+      <div class="nav-brand">
+        <i class="fas fa-brain"></i>
+        <span>Semantix</span>
+      </div>
+      <div class="nav-links">
+        <a href="/"><i class="fas fa-home"></i> Home</a>
+        <a href="/search.html" class="active"
+          ><i class="fas fa-search"></i> Search</a
+        >
+        <a href="/chat.html"><i class="fas fa-comments"></i> Ask</a>
+        <a href="/graph.html"><i class="fas fa-project-diagram"></i> Graph</a>
+        <a href="/train.html"><i class="fas fa-graduation-cap"></i> Train</a>
+      </div>
+      <div class="nav-auth" id="authSection">
+        <a href="/login.html" class="btn btn-outline">Login</a>
+      </div>
+    </nav>
+
+    <main class="search-page">
+      <div class="search-header">
+        <h1>Search Academic Papers</h1>
+        <div class="search-box large">
+          <input
+            type="text"
+            id="searchInput"
+            placeholder="Enter your search query..."
+          />
+          <button id="searchBtn" class="btn btn-primary">
+            <i class="fas fa-search"></i> Search
+          </button>
+        </div>
+        <div class="search-options">
+          <label>
+            <input type="checkbox" id="rerankToggle" checked />
+            Use semantic re-ranking
+          </label>
+        </div>
+      </div>
+
+      <div class="search-container">
+        <aside class="search-sidebar">
+          <div class="intent-card">
+            <h3>Detected Intent</h3>
+            <div id="intentDisplay" class="intent-badge">-</div>
+            <div id="confidenceDisplay" class="confidence">Confidence: -</div>
+          </div>
+
+          <div class="filter-card">
+            <h3>Intent Categories</h3>
+            <div class="intent-filters">
+              <label><input type="radio" name="intent" value="" checked /> All</label>
+              <label><input type="radio" name="intent" value="software_engineering" /> Software Engineering</label>
+              <label><input type="radio" name="intent" value="cloud" /> Cloud</label>
+              <label><input type="radio" name="intent" value="devops" /> DevOps</label>
+              <label><input type="radio" name="intent" value="ai_ml" /> AI/ML</label>
+              <label><input type="radio" name="intent" value="general" /> General</label>
+              <label><input type="radio" name="intent" value="cybersecurity" /> Cybersecurity</label>
+              <label><input type="radio" name="intent" value="database" /> Database</label>
+              <label><input type="radio" name="intent" value="networking" /> Networking</label>
+              <label><input type="radio" name="intent" value="mobile_development" /> Mobile Development</label>
+              <label><input type="radio" name="intent" value="web_development" /> Web Development</label>
+              <label><input type="radio" name="intent" value="data_science" /> Data Science</label>
+              <label><input type="radio" name="intent" value="blockchain" /> Blockchain</label>
+              <label><input type="radio" name="intent" value="emerging_tech" /> Emerging Tech</label>
+              <label><input type="radio" name="intent" value="it_management" /> IT Management</label>
+              <label><input type="radio" name="intent" value="systems" /> Systems</label>
+            </div>
+          </div>
+        </aside>
+
+        <div class="search-results">
+          <div id="resultsInfo" class="results-info"></div>
+          <div id="resultsList" class="results-list">
+            <div class="placeholder">
+              <i class="fas fa-search"></i>
+              <p>Enter a query to search for academic papers</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <script src="/js/main.js"></script>
+    <script src="/js/search.js"></script>
+  </body>
+</html>

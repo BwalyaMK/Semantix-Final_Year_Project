@@ -1,0 +1,289 @@
+/* Graph Page Styles */
+.graph-page {
+  min-height: calc(100vh - 60px);
+  display: flex;
+  flex-direction: column;
+}
+
+.graph-header {
+  padding: 2rem;
+  text-align: center;
+  background: white;
+  border-bottom: 1px solid var(--gray-200);
+}
+
+.graph-header h1 {
+  margin-bottom: 1rem;
+  color: var(--gray-800);
+}
+
+.graph-header .search-box {
+  margin: 0 auto;
+}
+
+/* Graph Layout */
+.graph-layout {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  overflow: hidden;
+}
+
+.graph-main {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Toolbar */
+.graph-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  background: white;
+  border-bottom: 1px solid var(--gray-200);
+}
+
+.toolbar-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.tool-btn {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--gray-100);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.tool-btn:hover {
+  background: var(--gray-200);
+}
+
+.threshold-control {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  color: var(--gray-600);
+}
+
+.threshold-control input[type="range"] {
+  width: 120px;
+}
+
+.graph-toolbar select {
+  padding: 0.5rem;
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius);
+  background: white;
+}
+
+/* Cytoscape Container */
+.cy-container {
+  flex: 1;
+  background: var(--gray-50);
+  position: relative;
+}
+
+.cy-container .graph-placeholder {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  color: var(--gray-400);
+}
+
+.cy-container .graph-placeholder i {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+  opacity: 0.5;
+}
+
+/* Legend */
+.graph-legend {
+  display: flex;
+  gap: 1.5rem;
+  padding: 0.75rem 1rem;
+  background: white;
+  border-top: 1px solid var(--gray-200);
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  color: var(--gray-600);
+}
+
+.legend-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+
+.legend-dot.primary {
+  background: var(--primary);
+}
+
+.legend-dot.related {
+  background: var(--gray-400);
+}
+
+.legend-line {
+  width: 20px;
+  height: 2px;
+  background: var(--gray-400);
+}
+
+/* Sidebar */
+.graph-sidebar {
+  background: white;
+  border-left: 1px solid var(--gray-200);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.stats-panel,
+.details-panel,
+.related-panel {
+  padding: 1rem;
+  border-bottom: 1px solid var(--gray-200);
+}
+
+.stats-panel h3,
+.details-panel h3,
+.related-panel h3 {
+  font-size: 0.875rem;
+  color: var(--gray-600);
+  margin-bottom: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.stat-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--gray-100);
+}
+
+.stat-label {
+  color: var(--gray-500);
+}
+
+.stat-value {
+  font-weight: 600;
+  color: var(--gray-800);
+}
+
+/* Paper Details */
+.paper-details {
+  font-size: 0.875rem;
+}
+
+.paper-details .paper-title {
+  font-weight: 600;
+  color: var(--primary);
+  margin-bottom: 0.5rem;
+}
+
+.paper-details .paper-authors {
+  color: var(--gray-500);
+  margin-bottom: 0.5rem;
+}
+
+.paper-details .paper-abstract {
+  color: var(--gray-600);
+  line-height: 1.6;
+  max-height: 150px;
+  overflow-y: auto;
+}
+
+.paper-details .paper-link {
+  display: inline-block;
+  margin-top: 0.75rem;
+}
+
+/* Related Panel in Sidebar */
+.graph-sidebar .related-panel {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.related-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.related-item {
+  padding: 0.75rem;
+  background: var(--gray-50);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.related-item:hover {
+  background: var(--gray-100);
+}
+
+.related-item .title {
+  font-size: 0.875rem;
+  color: var(--gray-800);
+  display: block;
+  margin-bottom: 0.25rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.related-item .meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  color: var(--gray-500);
+}
+
+.related-item.primary {
+  border-left: 3px solid var(--primary);
+}
+
+/* Loading Overlay */
+.loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.9);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+  .graph-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .graph-sidebar {
+    display: none;
+  }
+}

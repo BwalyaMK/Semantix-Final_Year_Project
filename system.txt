@@ -1,0 +1,1242 @@
+================================================================================
+                    SEMANTIX - SYSTEM ARCHITECTURE DOCUMENTATION
+                    Semantic Academic Search Platform
+================================================================================
+
+================================================================================
+1. SYSTEM OVERVIEW
+================================================================================
+
+Semantix is a Python-based semantic search and knowledge graph application for 
+exploring academic papers in software engineering, cloud computing, DevOps, 
+AI/ML, and other technology domains.
+
+Core Capabilities:
+- Intent-Based Search: Automatically classifies user queries into domains
+- Semantic Re-ranking: Uses transformer embeddings to re-rank search results
+- Interactive Knowledge Graph: Cytoscape.js visualization of paper relationships
+- Self-Learning: Automatically learns from unknown queries to improve classification
+- Manual Training: Add training examples and retrain the classifier
+
+================================================================================
+2. TECHNOLOGY STACK & VERSION NUMBERS
+================================================================================
+
+RUNTIME ENVIRONMENT:
+- Python: 3.10+ (required for modern type hints and library compatibility)
+- Operating System: Cross-platform (Windows, Linux, macOS)
+
+WEB FRAMEWORK:
+- Flask: >=3.0.0
+- Flask-CORS: >=4.0.0
+- Flask-Login: >=0.6.3
+- Werkzeug: >=3.0.1
+
+DATABASE & ORM:
+- SQLAlchemy: >=2.0.23
+- Flask-SQLAlchemy: >=3.1.1
+- SQLite: 3.x (default, bundled with Python)
+
+MACHINE LEARNING & AI:
+- PyTorch: >=2.0.0
+- Transformers (Hugging Face): >=4.36.0
+- sentence-transformers: >=2.2.2
+- scikit-learn: >=1.3.2
+- FAISS-CPU: >=1.7.4
+- KeyBERT: >=0.8.3
+
+DATA PROCESSING:
+- NumPy: >=1.26.0
+- Pandas: >=2.1.0
+- joblib: >=1.3.2
+
+UTILITIES:
+- Requests: >=2.31.0
+- python-dotenv: >=1.0.0
+
+EXTERNAL APIs:
+- OpenAlex API: v1 (https://api.openalex.org)
+
+FRONTEND (CDN):
+- Cytoscape.js: Latest via CDN
+- Font Awesome: Latest via CDN
+
+PRE-TRAINED MODEL:
+- Embedding Model: sentence-transformers/all-MiniLM-L6-v2
+  * Architecture: 6-layer BERT-based transformer
+  * Embedding Dimensions: 384
+  * Parameters: ~22 million
+  * Training Data: 1B+ sentence pairs
+  * Model Size: ~80MB
+
+================================================================================
+3. PROJECT STRUCTURE
+================================================================================
+
+SemantixRaw/
+├── app.py                    # Main Flask application entry point
+├── config.py                 # Configuration settings and constants
+├── requirements.txt          # Python dependencies with versions
+│
+├── database/
+│   ├── __init__.py          # Database package initializer
+│   └── models.py            # SQLAlchemy ORM models (7 models)
+│
+├── services/
+│   ├── __init__.py          # Services package initializer
+│   ├── embedding_service.py # Transformer embeddings + FAISS indexing
+│   ├── classifier_service.py# Intent classification (TF-IDF + LogisticRegression)
+│   ├── openalex_service.py  # OpenAlex API integration
+│   ├── graph_service.py     # Cytoscape.js graph builder
+│   ├── training_service.py  # Manual training management
+│   └── learning_service.py  # Self-learning from unknown queries
+│
+├── routes/
+│   ├── __init__.py          # Routes package initializer
+│   ├── auth.py              # Authentication endpoints (/auth/*)
+│   ├── search.py            # Search endpoints (/api/search/*)
+│   ├── chat.py              # Q&A endpoints (/api/chat/*)
+│   ├── graph.py             # Graph visualization endpoints (/api/graph/*)
+│   └── train.py             # Training management endpoints (/api/train/*)
+│
+├── public/
+│   ├── index.html           # Home page
+│   ├── search.html          # Search interface
+│   ├── chat.html            # Q&A interface
+│   ├── graph.html           # Graph explorer
+│   ├── train.html           # Training management
+│   ├── login.html           # Authentication page
+│   ├── css/                 # Stylesheets
+│   └── js/                  # JavaScript files
+│
+├── models/                   # Persisted ML model files
+│   ├── classifier.pkl       # Trained classifier model
+│   ├── vectorizer.pkl       # TF-IDF vectorizer
+│   └── faiss.index          # FAISS vector index
+│
+├── training_data.json       # External training dataset (235 examples)
+├── training_data2.0.json    # Backup training dataset
+└── instance/                 # SQLite database storage
+
+================================================================================
+4. TEST DATA & TRAINING DATASETS
+================================================================================
+
+4.1 EXTERNAL TRAINING DATA (training_data.json)
+------------------------------------------------
+Total Examples: 235 labeled question-intent pairs
+File Size: 19,814 bytes
+
+Distribution by Intent Category:
+┌─────────────────────────┬──────────┬─────────────────────────────────────────┐
+│ Intent Category         │ Examples │ Sample Questions                        │
+├─────────────────────────┼──────────┼─────────────────────────────────────────┤
+│ software_engineering    │    15    │ "How do I implement a binary search     │
+│                         │          │  tree in Python?"                       │
+│                         │          │ "What are SOLID principles?"            │
+│                         │          │ "How can I refactor legacy code?"       │
+├─────────────────────────┼──────────┼─────────────────────────────────────────┤
+│ cloud                   │    15    │ "How do I deploy an application on AWS?"│
+│                         │          │ "What's the difference between S3 and   │
+│                         │          │  EBS?"                                  │
+│                         │          │ "What are cloud security best practices?"│
+├─────────────────────────┼──────────┼─────────────────────────────────────────┤
+│ devops                  │    15    │ "What's the difference between CI and   │
+│                         │          │  CD?"                                   │
+│                         │          │ "How do I set up a Jenkins pipeline?"   │
+│                         │          │ "What are GitOps best practices?"       │
+├─────────────────────────┼──────────┼─────────────────────────────────────────┤
+│ ai_ml                   │    15    │ "How do neural networks learn from      │
+│                         │          │  data?"                                 │
+│                         │          │ "What's the difference between          │
+│                         │          │  supervised and unsupervised learning?" │
+│                         │          │ "How can I implement transfer learning?"│
+├─────────────────────────┼──────────┼─────────────────────────────────────────┤
+│ general                 │    15    │ "What programming language should I     │
+│                         │          │  learn first?"                          │
+│                         │          │ "How can I improve my coding skills?"   │
+│                         │          │ "How do I prepare for technical         │
+│                         │          │  interviews?"                           │
+├─────────────────────────┼──────────┼─────────────────────────────────────────┤
+│ cybersecurity           │    20    │ "How do I protect my network from cyber │
+│                         │          │  attacks?"                              │
+│                         │          │ "What are SQL injection attacks?"       │
+│                         │          │ "What are the OWASP Top 10?"            │
+├─────────────────────────┼──────────┼─────────────────────────────────────────┤
+│ database                │    15    │ "How do I design a scalable database    │
+│                         │          │  schema?"                               │
+│                         │          │ "What's the difference between SQL and  │
+│                         │          │  NoSQL?"                                │
+│                         │          │ "What are ACID properties?"             │
+├─────────────────────────┼──────────┼─────────────────────────────────────────┤
+│ networking              │    15    │ "How do I configure a router?"          │
+│                         │          │ "What's the difference between TCP and  │
+│                         │          │  UDP?"                                  │
+│                         │          │ "What are the layers of the OSI model?" │
+├─────────────────────────┼──────────┼─────────────────────────────────────────┤
+│ mobile_development      │    15    │ "How do I build a mobile app from       │
+│                         │          │  scratch?"                              │
+│                         │          │ "What's the difference between native   │
+│                         │          │  and hybrid apps?"                      │
+│                         │          │ "What are progressive web apps?"        │
+├─────────────────────────┼──────────┼─────────────────────────────────────────┤
+│ web_development         │    15    │ "How do I create responsive web         │
+│                         │          │  designs?"                              │
+│                         │          │ "What are JavaScript frameworks?"       │
+│                         │          │ "How can I implement real-time features │
+│                         │          │  using WebSockets?"                     │
+├─────────────────────────┼──────────┼─────────────────────────────────────────┤
+│ data_science            │    15    │ "How do I analyze big data efficiently?"│
+│                         │          │ "What are the best tools for data       │
+│                         │          │  science?"                              │
+│                         │          │ "How can I create interactive           │
+│                         │          │  dashboards?"                           │
+├─────────────────────────┼──────────┼─────────────────────────────────────────┤
+│ blockchain              │    10    │ "How do I implement blockchain          │
+│                         │          │  technology?"                           │
+│                         │          │ "How can I create a smart contract?"    │
+│                         │          │ "What are NFTs and how do they work?"   │
+├─────────────────────────┼──────────┼─────────────────────────────────────────┤
+│ emerging_tech           │    10    │ "How do I set up a virtual reality      │
+│                         │          │  development environment?"              │
+│                         │          │ "What are quantum computing             │
+│                         │          │  applications?"                         │
+│                         │          │ "How can I develop for IoT devices?"    │
+├─────────────────────────┼──────────┼─────────────────────────────────────────┤
+│ it_management           │    15    │ "How do I manage an IT project          │
+│                         │          │  effectively?"                          │
+│                         │          │ "What's the difference between Agile    │
+│                         │          │  and Waterfall?"                        │
+│                         │          │ "What's the role of a Scrum Master?"    │
+├─────────────────────────┼──────────┼─────────────────────────────────────────┤
+│ systems                 │    15    │ "How do I choose the right operating    │
+│                         │          │  system?"                               │
+│                         │          │ "What's the difference between          │
+│                         │          │  processes and threads?"                │
+│                         │          │ "What's the role of kernel in OS?"      │
+└─────────────────────────┴──────────┴─────────────────────────────────────────┘
+
+--------------------------------------------------------------------------------
+
+4.2 SEED TRAINING DATA (Built into training_service.py)
+--------------------------------------------------------
+Total Examples: 120 labeled question-intent pairs
+Source: Hardcoded in _get_seed_data() method
+
+Distribution:
+- software_engineering: 25 examples
+- cloud: 25 examples  
+- devops: 25 examples
+- ai_ml: 25 examples
+- general: 20 examples
+
+Sample Seed Examples by Category:
+
+SOFTWARE_ENGINEERING (25 examples):
+- "What are design patterns in software engineering?"
+- "How do I implement the singleton pattern?"
+- "What is test-driven development?"
+- "Explain SOLID principles"
+- "What is agile methodology?"
+- "How does version control work?"
+- "What is code refactoring?"
+- "Explain microservices architecture"
+- "What is clean code?"
+- "How to do code review effectively?"
+- "What is software testing?"
+- "Explain object-oriented programming"
+- "What is the software development lifecycle?"
+- "How to handle technical debt?"
+- "What is API design best practices?"
+- "How to write unit tests?"
+- "What is the factory design pattern?"
+- "Explain dependency injection"
+- "What is domain-driven design?"
+- "How to implement event-driven architecture?"
+- "What is behavior-driven development BDD?"
+- "Explain hexagonal architecture"
+- "What is functional programming?"
+- "How to design RESTful APIs?"
+- "What is continuous integration testing?"
+
+CLOUD (25 examples):
+- "What is cloud computing?"
+- "Explain AWS services"
+- "What is Azure?"
+- "How does Google Cloud Platform work?"
+- "What is serverless computing?"
+- "Explain IaaS, PaaS, and SaaS"
+- "What is cloud migration?"
+- "How to secure cloud infrastructure?"
+- "What is cloud native development?"
+- "Explain cloud storage solutions"
+- "What is multi-cloud strategy?"
+- "How does cloud load balancing work?"
+- "What is cloud cost optimization?"
+- "Explain virtual machines in cloud"
+- "What is cloud orchestration?"
+- "How does AWS Lambda work?"
+- "What is Azure Functions?"
+- "Explain Amazon S3 storage"
+- "What is cloud auto-scaling?"
+- "How to deploy applications to AWS?"
+- "What is Azure DevOps?"
+- "Explain cloud networking VPC"
+- "What is AWS EC2?"
+- "How to use Google Cloud Run?"
+- "What is cloud disaster recovery?"
+
+DEVOPS (25 examples):
+- "What is DevOps?"
+- "Explain CI/CD pipelines"
+- "How does Docker work?"
+- "What is Kubernetes?"
+- "Explain infrastructure as code"
+- "What is Jenkins?"
+- "How to implement continuous deployment?"
+- "What is GitOps?"
+- "Explain container orchestration"
+- "What is monitoring and observability?"
+- "How to use Terraform?"
+- "What is Ansible?"
+- "Explain DevSecOps"
+- "What is site reliability engineering?"
+- "How to automate deployments?"
+- "What is Docker Compose?"
+- "How to write Dockerfiles?"
+- "What is Helm for Kubernetes?"
+- "Explain GitHub Actions"
+- "What is ArgoCD?"
+- "How to set up monitoring with Prometheus?"
+- "What is Grafana used for?"
+- "Explain log aggregation with ELK stack"
+- "What is blue-green deployment?"
+- "How to implement canary releases?"
+
+AI_ML (25 examples):
+- "What is machine learning?"
+- "Explain neural networks"
+- "What is deep learning?"
+- "How do transformers work?"
+- "What is natural language processing?"
+- "Explain computer vision"
+- "What is reinforcement learning?"
+- "How to train a machine learning model?"
+- "What are embeddings?"
+- "Explain GPT and large language models"
+- "What is transfer learning?"
+- "How does BERT work?"
+- "What is data preprocessing for ML?"
+- "Explain supervised vs unsupervised learning"
+- "What is model fine-tuning?"
+- "How to use TensorFlow?"
+- "What is PyTorch?"
+- "Explain convolutional neural networks CNN"
+- "What is recurrent neural network RNN?"
+- "How to build a recommendation system?"
+- "What is sentiment analysis?"
+- "Explain attention mechanism in transformers"
+- "What is feature engineering?"
+- "How to evaluate ML model performance?"
+- "What is MLOps?"
+
+GENERAL (20 examples):
+- "How to learn programming?"
+- "What programming language should I learn?"
+- "How to become a software developer?"
+- "What is computer science?"
+- "How to prepare for technical interviews?"
+- "What are good coding practices?"
+- "How to build a portfolio?"
+- "What is open source?"
+- "How to contribute to open source?"
+- "What is GitHub?"
+- "How to debug code effectively?"
+- "What is the best IDE for programming?"
+- "How to read technical documentation?"
+- "What is stack overflow?"
+- "How to write better code comments?"
+- "What is pair programming?"
+- "How to stay updated with technology?"
+- "What are coding bootcamps?"
+- "How to manage coding projects?"
+- "What is technical blogging?"
+
+--------------------------------------------------------------------------------
+
+4.3 COMBINED TRAINING DATA STATISTICS
+--------------------------------------
+Total Potential Training Examples: 355
+- Seed Data (built-in): 120 examples (5 categories)
+- External JSON Data: 235 examples (15 categories)
+
+Intent Categories (15 total):
+1. software_engineering
+2. cloud
+3. devops
+4. ai_ml
+5. general
+6. cybersecurity
+7. database
+8. networking
+9. mobile_development
+10. web_development
+11. data_science
+12. blockchain
+13. emerging_tech
+14. it_management
+15. systems
+
+================================================================================
+5. DATABASE MODELS
+================================================================================
+
+5.1 User Model
+--------------
+Purpose: User authentication and session management
+Table: 'users'
+
+Fields:
+- id (Integer, Primary Key)
+- email (String, Unique, Required)
+- name (String, Optional)
+- password_hash (String, Required) - Werkzeug hashed password
+- created_at (DateTime)
+
+Key Methods:
+- set_password(password): Hashes and stores password
+- check_password(password): Validates password against hash
+- to_dict(): Serializes user to dictionary
+
+Security: Uses Werkzeug's generate_password_hash/check_password_hash
+
+--------------------------------------------------------------------------------
+
+5.2 TrainingData Model
+----------------------
+Purpose: Stores training examples for the intent classifier
+Table: 'training_data'
+
+Fields:
+- id (Integer, Primary Key)
+- question (Text, Required) - The training phrase/question
+- intent (String, Required) - Target classification label
+- source (String) - Origin: 'manual', 'seed', 'learned', 'batch'
+- created_at (DateTime)
+
+Usage: Provides labeled data for training the classifier
+
+--------------------------------------------------------------------------------
+
+5.3 LearnedData Model
+---------------------
+Purpose: Self-learned examples from low-confidence queries
+Table: 'learned_data'
+
+Fields:
+- id (Integer, Primary Key)
+- user_query (Text, Required) - Original user query
+- inferred_intent (String, Required) - System-inferred intent
+- confidence (Float, Required) - Inference confidence score
+- keywords (Text) - JSON array of extracted keywords
+- abstract_ids (Text) - JSON array of OpenAlex IDs used for inference
+- verified (Boolean) - User verification flag
+- added_to_training (Boolean) - Promotion status flag
+- created_at (DateTime)
+
+Workflow: Queries with low confidence are stored here, can be verified by users,
+and promoted to TrainingData when verified or high-confidence.
+
+--------------------------------------------------------------------------------
+
+5.4 CachedArticle Model
+-----------------------
+Purpose: Cache for OpenAlex articles to improve performance
+Table: 'cached_articles'
+
+Fields:
+- id (Integer, Primary Key)
+- openalex_id (String, Unique, Required) - OpenAlex work identifier
+- title (Text, Required)
+- abstract (Text)
+- authors (Text) - JSON array
+- publication_year (Integer)
+- doi (String)
+- url (String)
+- concepts (Text) - JSON array of OpenAlex concepts
+- embedding (LargeBinary) - Numpy array as bytes for fast similarity
+- created_at, updated_at (DateTime)
+
+--------------------------------------------------------------------------------
+
+5.5 Concept Model
+-----------------
+Purpose: Extracted concepts/keywords for knowledge graph
+Table: 'concepts'
+
+Fields:
+- id (Integer, Primary Key)
+- name (String, Unique, Required) - Concept name
+- category (String) - Associated intent category
+- frequency (Integer) - Usage count
+- created_at (DateTime)
+
+--------------------------------------------------------------------------------
+
+5.6 ConceptRelation Model
+-------------------------
+Purpose: Relationships between concepts for knowledge graph
+Table: 'concept_relations'
+
+Fields:
+- id (Integer, Primary Key)
+- source_id (Integer, Foreign Key -> concepts.id)
+- target_id (Integer, Foreign Key -> concepts.id)
+- weight (Float) - Relationship strength (0-1)
+- relation_type (String) - Type of relationship (default: 'related')
+
+Relationships: source -> Concept, target -> Concept
+
+--------------------------------------------------------------------------------
+
+5.7 SearchHistory Model
+-----------------------
+Purpose: Search analytics and learning
+Table: 'search_history'
+
+Fields:
+- id (Integer, Primary Key)
+- user_id (Integer, Foreign Key -> users.id, Optional)
+- query (Text, Required)
+- intent (String) - Classified intent
+- confidence (Float) - Classification confidence
+- results_count (Integer) - Number of results returned
+- created_at (DateTime)
+
+Relationships: user -> User
+
+================================================================================
+6. SERVICE LAYER - MACHINE LEARNING MODELS
+================================================================================
+
+6.1 EmbeddingService (embedding_service.py)
+-------------------------------------------
+Purpose: Text embedding generation and vector similarity search using NLP
+
+Model: sentence-transformers/all-MiniLM-L6-v2
+- Produces 384-dimensional embeddings
+- Pre-trained on 1B+ sentence pairs
+- Optimized for semantic similarity tasks
+
+Implementation Pattern: Singleton (prevents reloading model)
+
+Core Components:
+1. SentenceTransformer Model
+   - Loads MiniLM-L6-v2 transformer model
+   - Generates normalized embeddings for cosine similarity
+
+2. FAISS Index (IndexFlatIP)
+   - Inner product index for fast similarity search
+   - Stores document embeddings for retrieval
+   - Persisted to disk (faiss.index, faiss.index.ids.npy)
+
+Key Methods:
+
+embed_text(text: str) -> np.ndarray
+  - Generates embedding for single text
+  - Returns normalized 384-dim float32 array
+  - Uses: Query embedding, single document embedding
+
+embed_texts(texts: List[str]) -> np.ndarray
+  - Batch embedding generation
+  - More efficient for multiple texts
+  - Returns (N, 384) array
+
+search(query_embedding, k=10) -> List[Tuple[str, float]]
+  - Searches FAISS index for k nearest neighbors
+  - Returns (document_id, similarity_score) pairs
+  - Scores range 0-1 (cosine similarity)
+
+rank_by_similarity(query_embedding, candidate_embeddings, candidate_ids)
+  - Re-ranks candidates by similarity to query
+  - Used for search result re-ranking
+  - Returns sorted (id, score) list
+
+compute_similarity_matrix(embeddings) -> np.ndarray
+  - Computes pairwise similarity for graph edges
+  - Returns NxN matrix of cosine similarities
+
+How It Achieves Semantic Search:
+1. User query is embedded using MiniLM-L6
+2. Document abstracts are embedded similarly
+3. Cosine similarity measures semantic relatedness
+4. Higher scores = more semantically similar content
+5. FAISS enables sub-linear search time for large indexes
+
+--------------------------------------------------------------------------------
+
+6.2 ClassifierService (classifier_service.py)
+---------------------------------------------
+Purpose: Intent classification using traditional ML
+
+Model Architecture: scikit-learn Pipeline
+1. TfidfVectorizer
+   - max_features: 5000
+   - ngram_range: (1, 2) - unigrams and bigrams
+   - stop_words: 'english'
+   - min_df: 1, max_df: 0.95
+
+2. LogisticRegression
+   - solver: 'lbfgs'
+   - max_iter: 1000
+   - class_weight: 'balanced' (handles class imbalance)
+
+Implementation Pattern: Singleton
+
+Intent Categories (15 total):
+- software_engineering, cloud, devops, ai_ml, general
+- cybersecurity, database, networking
+- mobile_development, web_development, data_science
+- blockchain, emerging_tech, it_management, systems
+
+Key Methods:
+
+train(texts, labels) -> Dict
+  - Trains pipeline on provided data
+  - Computes cross-validation score
+  - Saves model to disk (classifier.pkl)
+  - Returns training metrics
+
+predict(text: str) -> Tuple[str, float]
+  - Predicts intent for single query
+  - Returns (predicted_intent, confidence)
+  - Confidence = max probability across classes
+
+predict_batch(texts) -> List[Tuple[str, float]]
+  - Batch prediction for efficiency
+  - Used for evaluating multiple queries
+
+get_all_probabilities(text) -> Dict[str, float]
+  - Returns probability for each intent class
+  - Used for debugging and analysis
+
+How Classification Works:
+1. Text is converted to TF-IDF vector (unigrams + bigrams)
+2. Logistic regression computes class probabilities
+3. Highest probability class becomes prediction
+4. Confidence threshold (0.6) determines learning trigger
+5. Low confidence queries trigger self-learning
+
+--------------------------------------------------------------------------------
+
+6.3 OpenAlexService (openalex_service.py)
+-----------------------------------------
+Purpose: Academic paper search via OpenAlex API
+
+API Base: https://api.openalex.org
+
+Intent-Specific Filters:
+- Each intent has associated keywords and OpenAlex concept IDs
+- Keywords enhance search queries
+- Example: 'ai_ml' adds 'artificial intelligence', 'machine learning'
+
+Key Methods:
+
+search(query, intent, page, per_page) -> Dict
+  - Searches OpenAlex /works endpoint
+  - Enhances query with intent keywords
+  - Returns processed article list
+
+get_work_by_id(openalex_id) -> Dict
+  - Fetches single work by ID
+  - Returns full article details
+
+get_related_works(openalex_id, limit) -> List[Dict]
+  - Fetches related papers from OpenAlex
+  - Used for graph expansion
+
+search_with_reranking(query, intent, embedding_service, top_k, fetch_count)
+  - Combined search + semantic re-ranking
+  - Fetches more results than needed (fetch_count)
+  - Re-ranks by embedding similarity
+  - Returns top_k most relevant results
+
+Article Processing:
+- Reconstructs abstract from OpenAlex inverted index format
+- Extracts authors (limited to 5)
+- Extracts concepts with scores
+- Handles open access URLs
+
+How Re-ranking Improves Results:
+1. OpenAlex returns keyword-based results
+2. Query and abstracts are embedded
+3. Cosine similarity computed between query and each abstract
+4. Results re-ordered by semantic similarity
+5. Semantically closer papers rise to top
+
+--------------------------------------------------------------------------------
+
+6.4 GraphService (graph_service.py)
+-----------------------------------
+Purpose: Builds similarity graphs for Cytoscape.js visualization
+
+Dependencies: EmbeddingService, OpenAlexService
+
+Key Methods:
+
+build_similarity_graph(primary_results, query, include_related, max_related, threshold)
+  - Creates graph from search results
+  - Optionally fetches related works
+  - Returns Cytoscape.js compatible format
+
+Graph Building Process:
+1. Add primary search results as nodes
+2. For top 3 results, fetch related works from OpenAlex
+3. Generate embeddings for all articles
+4. Compute query similarity for node sizing
+5. Compute pairwise similarity matrix
+6. Create edges for pairs above threshold
+
+Output Format (Cytoscape.js):
+{
+  nodes: [
+    {
+      data: {
+        id: 'W123456',
+        label: 'Paper Title...',
+        title: 'Full Title',
+        abstract: '...',
+        authors: [...],
+        year: 2023,
+        similarity: 0.85,
+        is_primary: true
+      },
+      classes: 'primary'
+    }
+  ],
+  edges: [
+    {
+      data: {
+        id: 'e0',
+        source: 'W123',
+        target: 'W456',
+        weight: 0.72,
+        label: '0.72'
+      }
+    }
+  ],
+  related_rankings: [...],
+  stats: {total_nodes, total_edges, primary_count, related_count}
+}
+
+update_threshold(graph_data, new_threshold)
+  - Filters edges dynamically
+  - Enables UI-driven threshold adjustment
+
+--------------------------------------------------------------------------------
+
+6.5 LearningService (learning_service.py)
+-----------------------------------------
+Purpose: Self-learning from low-confidence queries
+
+Dependencies: ClassifierService, EmbeddingService, OpenAlexService
+
+Trigger: Query confidence < CONFIDENCE_THRESHOLD (0.6)
+
+Learning Process:
+
+1. Keyword Extraction
+   - Combines query + top 3 result abstracts/titles
+   - Uses KeyBERT if available (transformer-based)
+   - Fallback: frequency-based word extraction
+   - Extracts OpenAlex concepts from results
+
+2. Intent Inference
+   - Maps extracted keywords to intent keyword lists
+   - Scores each intent by keyword matches
+   - Best matching intent becomes inferred intent
+   - Confidence = best_score / total_score
+
+3. Storage
+   - Creates LearnedData record
+   - Stores query, inferred intent, confidence, keywords
+   - Marks as unverified
+
+4. Automatic Promotion
+   - After SELF_LEARNING_RETRAIN_THRESHOLD (5) new examples
+   - Promotes verified OR high-confidence (>0.7) examples
+   - Adds to TrainingData with source='learned'
+   - Triggers classifier retraining
+
+Key Methods:
+
+learn_from_query(query, search_results, original_confidence) -> Dict
+  - Full learning pipeline
+  - Returns learned example info
+
+verify_learned_example(learned_id, correct_intent) -> Dict
+  - User verification/correction
+  - Updates verified flag
+  - Optionally corrects intent
+
+force_retrain() -> Dict
+  - Manual trigger for promotion + retraining
+
+Intent Keyword Mappings (15 categories with 10-15 keywords each):
+- software_engineering: software, programming, code, development, testing...
+- cloud: cloud, aws, azure, serverless, kubernetes...
+- devops: devops, ci/cd, docker, pipeline, automation...
+- ai_ml: machine learning, neural network, deep learning, nlp...
+- cybersecurity: security, encryption, malware, firewall...
+- database: database, sql, nosql, index, replication...
+- networking: network, tcp, udp, router, dns...
+- mobile_development: mobile, ios, android, flutter...
+- web_development: web, html, css, javascript, react...
+- data_science: data science, visualization, big data, statistics...
+- blockchain: blockchain, bitcoin, ethereum, smart contract...
+- emerging_tech: vr, ar, iot, quantum, edge computing...
+- it_management: project management, agile, scrum, governance...
+- systems: operating system, linux, process, thread, kernel...
+- general: programming, learn, career, technology...
+
+--------------------------------------------------------------------------------
+
+6.6 TrainingService (training_service.py)
+-----------------------------------------
+Purpose: Manual training management
+
+Key Methods:
+
+add_training_example(question, intent, source) -> Dict
+  - Adds single example to TrainingData
+  - Handles duplicates (updates if different intent)
+  - Validates intent against INTENT_CATEGORIES
+
+add_batch_training(examples) -> Dict
+  - Batch import from JSON or CSV
+  - Returns added/updated/error counts
+
+retrain_classifier() -> Dict
+  - Fetches all TrainingData
+  - Calls ClassifierService.train()
+  - Returns training metrics (cv_score, classes)
+
+initialize_with_seed_data() -> Dict
+  - Called on first run
+  - Adds 120 seed examples across 5 core intents
+  - 25 examples each for: software_engineering, cloud, devops, ai_ml
+  - 20 examples for: general
+  - Trains initial classifier
+
+================================================================================
+7. API ENDPOINTS
+================================================================================
+
+7.1 Authentication Routes (/auth/*)
+-----------------------------------
+POST /auth/register
+  - Body: {email, password, name}
+  - Creates user, logs in
+  - Returns: {success, user}
+
+POST /auth/login
+  - Body: {email, password, remember}
+  - Validates credentials
+  - Returns: {success, user}
+
+POST /auth/logout
+  - Requires authentication
+  - Ends session
+  - Returns: {success}
+
+GET /auth/me
+  - Returns current user info
+  - Returns: {authenticated, user}
+
+PUT /auth/update
+  - Requires authentication
+  - Body: {name, password}
+  - Updates profile
+
+--------------------------------------------------------------------------------
+
+7.2 Search Routes (/api/search/*)
+---------------------------------
+POST /api/search/
+  - Body: {query, page, per_page, rerank}
+  - Classifies intent, searches, optionally re-ranks
+  - Logs to SearchHistory
+  - Returns: {query, intent, confidence, results, total}
+
+GET /api/search/simple?q=<query>&page=1&per_page=10
+  - Simple GET-based search
+  - No re-ranking
+  - Returns: {query, intent, confidence, results, meta}
+
+GET /api/search/intents
+  - Returns available intent categories
+  - Returns: {intents, classifier_status}
+
+POST /api/search/classify
+  - Body: {query}
+  - Classification only (no search)
+  - Returns: {query, intent, confidence, all_probabilities, is_confident}
+
+GET /api/search/history?limit=20
+  - Recent search history
+  - User-specific if authenticated
+  - Returns: {history}
+
+--------------------------------------------------------------------------------
+
+7.3 Chat Routes (/api/chat/*)
+-----------------------------
+POST /api/chat/ask
+  - Body: {question, include_graph, max_related}
+  - Full Q&A with graph generation
+  - Triggers self-learning if low confidence
+  - Returns: {question, intent, confidence, summary, answers, graph, learned}
+
+POST /api/chat/quick
+  - Body: {question}
+  - Fast answer without graph
+  - Returns: {question, intent, confidence, answers}
+
+POST /api/chat/feedback
+  - Body: {learned_id, correct_intent}
+  - User feedback on learned queries
+  - Returns: {success, learned_id, intent, verified}
+
+GET /api/chat/stats
+  - Learning and classifier statistics
+  - Returns: {classifier, learning, config}
+
+--------------------------------------------------------------------------------
+
+7.4 Graph Routes (/api/graph/*)
+-------------------------------
+POST /api/graph/build
+  - Body: {query, max_related, threshold}
+  - Builds similarity graph
+  - Returns: {query, intent, confidence, primary_results, graph}
+
+GET /api/graph/related/<openalex_id>?limit=10
+  - Fetches related works for article
+  - Returns: {openalex_id, related, count}
+
+GET /api/graph/article/<openalex_id>
+  - Single article details
+  - Returns: article object or 404
+
+POST /api/graph/filter
+  - Body: {graph, threshold}
+  - Filters edges by new threshold
+  - Returns: filtered graph
+
+POST /api/graph/expand
+  - Body: {openalex_id, query, existing_ids, limit}
+  - Expands node with related works
+  - Returns: {openalex_id, new_nodes, new_edges}
+
+--------------------------------------------------------------------------------
+
+7.5 Training Routes (/api/train/*)
+----------------------------------
+POST /api/train/add
+  - Body: {question, intent}
+  - Adds single training example
+  - Returns: {success, action, id}
+
+POST /api/train/batch
+  - Body: {examples: [{question, intent}, ...]}
+  - Or CSV: question,intent\n...
+  - Returns: {success, added, updated, errors}
+
+POST /api/train/retrain
+  - Retrains classifier
+  - Returns: {success, training_samples, classes, cv_score}
+
+GET /api/train/data?page=1&per_page=50
+  - Paginated training data
+  - Returns: {examples, total, pages, current_page}
+
+DELETE /api/train/data/<example_id>
+  - Deletes training example
+  - Returns: {success, deleted_id}
+
+GET /api/train/export?format=json|csv
+  - Exports all training data
+  - Returns: JSON array or CSV file
+
+GET /api/train/stats
+  - Training statistics
+  - Returns: {training, learning, intents}
+
+GET /api/train/learned?page=1&per_page=20
+  - Pending learned data
+  - Returns: {examples, total, pages, current_page}
+
+POST /api/train/learned/<learned_id>/verify
+  - Body: {correct_intent}
+  - Verifies/corrects learned example
+  - Returns: {success, learned_id, intent, verified}
+
+POST /api/train/learned/promote
+  - Forces promotion and retraining
+  - Returns: {success, retrain_result}
+
+POST /api/train/reset
+  - Body: {confirm: true, reseed: false}
+  - Resets classifier
+  - Optionally re-seeds with initial data
+
+GET /api/train/intents
+  - Returns: {intents}
+
+================================================================================
+8. DATA FLOW DIAGRAMS
+================================================================================
+
+8.1 Search Flow
+---------------
+User Query
+    │
+    ▼
+┌─────────────────────┐
+│ ClassifierService   │
+│ predict(query)      │
+└─────────────────────┘
+    │
+    ▼ (intent, confidence)
+┌─────────────────────┐
+│ OpenAlexService     │
+│ search_with_reranking│
+└─────────────────────┘
+    │
+    ├──► OpenAlex API (fetch results)
+    │
+    ▼
+┌─────────────────────┐
+│ EmbeddingService    │
+│ embed_text(query)   │
+│ embed_texts(abstracts)│
+│ rank_by_similarity()│
+└─────────────────────┘
+    │
+    ▼ (re-ranked results)
+┌─────────────────────┐
+│ SearchHistory       │
+│ (log query)         │
+└─────────────────────┘
+    │
+    ▼
+Response to User
+
+--------------------------------------------------------------------------------
+
+8.2 Self-Learning Flow
+----------------------
+Low Confidence Query (< 0.6)
+    │
+    ▼
+┌─────────────────────┐
+│ LearningService     │
+│ learn_from_query()  │
+└─────────────────────┘
+    │
+    ├──► Extract keywords (KeyBERT or frequency)
+    │
+    ├──► Infer intent from keywords
+    │
+    ▼
+┌─────────────────────┐
+│ LearnedData         │
+│ (store example)     │
+└─────────────────────┘
+    │
+    ▼ (if threshold reached)
+┌─────────────────────┐
+│ Promotion           │
+│ (verified OR >0.7)  │
+└─────────────────────┘
+    │
+    ▼
+┌─────────────────────┐
+│ TrainingData        │
+│ (add to training)   │
+└─────────────────────┘
+    │
+    ▼
+┌─────────────────────┐
+│ ClassifierService   │
+│ train()             │
+└─────────────────────┘
+
+--------------------------------------------------------------------------------
+
+8.3 Graph Building Flow
+-----------------------
+Search Results
+    │
+    ▼
+┌─────────────────────┐
+│ GraphService        │
+│ build_similarity_graph()│
+└─────────────────────┘
+    │
+    ├──► Add primary results as nodes
+    │
+    ├──► Fetch related works (top 3 primaries)
+    │         │
+    │         ▼
+    │    OpenAlexService.get_related_works()
+    │
+    ├──► Generate embeddings
+    │         │
+    │         ▼
+    │    EmbeddingService.embed_texts()
+    │
+    ├──► Compute similarities
+    │         │
+    │         ▼
+    │    compute_similarity_matrix()
+    │
+    ├──► Build nodes with query similarity
+    │
+    ▼
+┌─────────────────────┐
+│ Build edges         │
+│ (pairs > threshold) │
+└─────────────────────┘
+    │
+    ▼
+Cytoscape.js Graph Data
+
+================================================================================
+9. CONFIGURATION
+================================================================================
+
+Environment Variables (.env):
+- SECRET_KEY: Flask session key
+- DEBUG: Enable debug mode
+- DATABASE_URI: SQLAlchemy connection string
+- OPENALEX_EMAIL: Email for OpenAlex polite pool
+
+Config Constants (config.py):
+- EMBEDDING_MODEL_NAME: 'sentence-transformers/all-MiniLM-L6-v2'
+- CONFIDENCE_THRESHOLD: 0.6 (triggers self-learning)
+- SELF_LEARNING_RETRAIN_THRESHOLD: 5 (auto-retrain trigger)
+- TOP_RESULTS: 10 (default result count)
+- RELATED_ARTICLES: 15 (graph expansion limit)
+- SIMILARITY_THRESHOLD: 0.5 (minimum edge weight)
+
+Model Paths:
+- CLASSIFIER_PATH: models/classifier.pkl
+- VECTORIZER_PATH: models/vectorizer.pkl
+- FAISS_INDEX_PATH: models/faiss.index
+
+================================================================================
+10. INITIALIZATION SEQUENCE
+================================================================================
+
+On Application Start (app.py):
+
+1. Create Flask app with configuration
+2. Initialize extensions (CORS, SQLAlchemy, Flask-Login)
+3. Register blueprints (auth, search, chat, graph, train)
+4. init_app() called:
+   a. Create models/ directory
+   b. Create database tables (db.create_all())
+   c. Check if classifier exists
+   d. If not: initialize_with_seed_data()
+      - Load 120 seed examples
+      - Train initial classifier
+5. Start Flask server on port 5000
+
+First Query Flow:
+1. EmbeddingService singleton created
+   - Loads MiniLM-L6-v2 model (~80MB)
+   - Creates/loads FAISS index
+2. ClassifierService singleton created
+   - Loads trained classifier.pkl
+3. Other services initialized as needed
+
+================================================================================
+11. KEY ALGORITHMS
+================================================================================
+
+11.1 TF-IDF + Logistic Regression (Classification)
+--------------------------------------------------
+1. TF-IDF Vectorization:
+   - Term Frequency: How often word appears in document
+   - Inverse Document Frequency: Rarity across all documents
+   - TF-IDF = TF × IDF (important words get high scores)
+   - N-grams (1,2) capture phrases like "machine learning"
+
+2. Logistic Regression:
+   - Computes weighted sum of TF-IDF features
+   - Applies softmax for multi-class probabilities
+   - Balanced class weights handle imbalanced intents
+
+--------------------------------------------------------------------------------
+
+11.2 Sentence Embeddings (Semantic Similarity)
+----------------------------------------------
+1. MiniLM-L6-v2 Architecture:
+   - 6-layer transformer (distilled from larger models)
+   - 384-dimensional output embeddings
+   - Mean pooling over token embeddings
+
+2. Cosine Similarity:
+   - similarity = (A · B) / (||A|| × ||B||)
+   - With normalized vectors: similarity = A · B (dot product)
+   - Range: -1 to 1 (0-1 for positive embeddings)
+
+--------------------------------------------------------------------------------
+
+11.3 FAISS Indexing
+-------------------
+1. IndexFlatIP (Inner Product):
+   - Exact nearest neighbor search
+   - O(n) search time (acceptable for <100K vectors)
+   - No approximation, highest accuracy
+
+2. Index Operations:
+   - add(): Insert vectors
+   - search(): Find k nearest neighbors
+   - ID mapping maintained separately
+
+================================================================================
+12. SECURITY CONSIDERATIONS
+================================================================================
+
+- Passwords hashed using Werkzeug (PBKDF2 + SHA256)
+- Flask-Login manages session security
+- CORS enabled for cross-origin requests
+- Input validation on all API endpoints
+- SQL injection prevented by SQLAlchemy ORM
+
+================================================================================
+13. PERFORMANCE OPTIMIZATIONS
+================================================================================
+
+- Singleton pattern for ML model services (avoid reloading)
+- FAISS for fast vector similarity search
+- Batch embedding generation for multiple texts
+- Article caching in database
+- Pagination on all list endpoints
+- Lazy loading of KeyBERT (optional dependency)
+
+================================================================================
+14. EXTENSIBILITY POINTS
+================================================================================
+
+- Add new intent categories in Config.INTENT_CATEGORIES
+- Extend intent_filters in OpenAlexService for new domains
+- Add intent_keywords in LearningService for inference
+- Create new routes in routes/ directory
+- Add new models in database/models.py
+
+================================================================================
+                              END OF DOCUMENTATION
+================================================================================

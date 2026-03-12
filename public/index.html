@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Semantix - Semantic Search Engine</title>
+    <link rel="stylesheet" href="/css/style.css" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+  </head>
+  <body>
+    <nav class="navbar">
+      <div class="nav-brand">
+        <i class="fas fa-brain"></i>
+        <span>Semantix</span>
+      </div>
+      <div class="nav-links">
+        <a href="/" class="active"><i class="fas fa-home"></i> Home</a>
+        <a href="/search.html"><i class="fas fa-search"></i> Search</a>
+        <a href="/chat.html"><i class="fas fa-comments"></i> Ask</a>
+        <a href="/graph.html"><i class="fas fa-project-diagram"></i> Graph</a>
+        <a href="/train.html"><i class="fas fa-graduation-cap"></i> Train</a>
+      </div>
+      <div class="nav-auth" id="authSection">
+        <a href="/login.html" class="btn btn-outline">Login</a>
+      </div>
+    </nav>
+
+    <main class="hero">
+      <div class="hero-content">
+        <h1>Semantic Academic Search</h1>
+        <p>
+          Discover research papers with AI-powered semantic search and knowledge
+          graphs
+        </p>
+
+        <div class="search-box">
+          <input
+            type="text"
+            id="homeSearchInput"
+            placeholder="Ask a question about software, cloud, DevOps, or AI..."
+          />
+          <button id="homeSearchBtn" class="btn btn-primary">
+            <i class="fas fa-search"></i> Search
+          </button>
+        </div>
+
+        <div class="quick-topics">
+          <span>Try:</span>
+          <button class="topic-btn" data-query="What is machine learning?">
+            Machine Learning
+          </button>
+          <button
+            class="topic-btn"
+            data-query="Explain microservices architecture"
+          >
+            Microservices
+          </button>
+          <button class="topic-btn" data-query="How does Kubernetes work?">
+            Kubernetes
+          </button>
+          <button class="topic-btn" data-query="What are design patterns?">
+            Design Patterns
+          </button>
+        </div>
+      </div>
+    </main>
+
+    <section class="features">
+      <div class="feature-card">
+        <i class="fas fa-search-plus"></i>
+        <h3>Semantic Search</h3>
+        <p>Find relevant papers using AI-powered embeddings and re-ranking</p>
+      </div>
+      <div class="feature-card">
+        <i class="fas fa-project-diagram"></i>
+        <h3>Knowledge Graph</h3>
+        <p>Visualize connections between papers with interactive graphs</p>
+      </div>
+      <div class="feature-card">
+        <i class="fas fa-robot"></i>
+        <h3>Self-Learning</h3>
+        <p>The system learns from your queries to improve over time</p>
+      </div>
+      <div class="feature-card">
+        <i class="fas fa-graduation-cap"></i>
+        <h3>Custom Training</h3>
+        <p>Train the model with your own examples for better results</p>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <p>This Project was Submitted to The Zambia University College of Technology <br> by Bwalya Mumba Kalambo - 2200391 <br> as Partial Fulfilment for the Award of Bachelor's Degree in Software Engineering</p>
+    </footer>
+
+    <script src="/js/main.js"></script>
+  </body>
+</html>

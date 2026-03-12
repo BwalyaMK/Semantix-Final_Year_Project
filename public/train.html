@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Training - Semantix</title>
+    <link rel="stylesheet" href="/css/style.css" />
+    <link rel="stylesheet" href="/css/train.css" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+  </head>
+  <body>
+    <nav class="navbar">
+      <div class="nav-brand">
+        <i class="fas fa-brain"></i>
+        <span>Semantix</span>
+      </div>
+      <div class="nav-links">
+        <a href="/"><i class="fas fa-home"></i> Home</a>
+        <a href="/search.html"><i class="fas fa-search"></i> Search</a>
+        <a href="/chat.html"><i class="fas fa-comments"></i> Ask</a>
+        <a href="/graph.html"><i class="fas fa-project-diagram"></i> Graph</a>
+        <a href="/train.html" class="active"
+          ><i class="fas fa-graduation-cap"></i> Train</a
+        >
+      </div>
+      <div class="nav-auth" id="authSection">
+        <a href="/login.html" class="btn btn-outline">Login</a>
+      </div>
+    </nav>
+
+    <main class="train-page">
+      <div class="train-header">
+        <h1>Train the Intent Classifier</h1>
+        <p>Add training examples to improve the model's accuracy</p>
+      </div>
+
+      <div class="train-container">
+        <div class="train-main">
+          <!-- Add Single Example -->
+          <section class="train-section">
+            <h2><i class="fas fa-plus-circle"></i> Add Training Example</h2>
+            <form id="addExampleForm" class="add-form">
+              <div class="form-group">
+                <label for="questionInput">Question / Query</label>
+                <input
+                  type="text"
+                  id="questionInput"
+                  placeholder="Enter a sample question..."
+                />
+              </div>
+              <div class="form-group">
+                <label for="intentSelect">Intent Category</label>
+                <select id="intentSelect">
+                  <option value="">Select intent...</option>
+                  <option value="software_engineering">Software Engineering</option>
+                  <option value="cloud">Cloud</option>
+                  <option value="devops">DevOps</option>
+                  <option value="ai_ml">AI/ML</option>
+                  <option value="general">General</option>
+                  <option value="cybersecurity">Cybersecurity</option>
+                  <option value="database">Database</option>
+                  <option value="networking">Networking</option>
+                  <option value="mobile_development">Mobile Development</option>
+                  <option value="web_development">Web Development</option>
+                  <option value="data_science">Data Science</option>
+                  <option value="blockchain">Blockchain</option>
+                  <option value="emerging_tech">Emerging Tech</option>
+                  <option value="it_management">IT Management</option>
+                  <option value="systems">Systems</option>
+                </select>
+              </div>
+              <button type="submit" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Add Example
+              </button>
+            </form>
+          </section>
+
+          <!-- Batch Upload -->
+          <section class="train-section">
+            <h2><i class="fas fa-upload"></i> Batch Upload</h2>
+            <div class="upload-area" id="uploadArea">
+              <input type="file" id="csvFile" accept=".csv,.json" hidden />
+              <i class="fas fa-cloud-upload-alt"></i>
+              <p>
+                Drag & drop a CSV or JSON file, or
+                <button id="browseBtn" class="link-btn">browse</button>
+              </p>
+              <small
+                >CSV format: question,intent | JSON format: [{"question": "...",
+                "intent": "..."}]</small
+              >
+            </div>
+            <div id="uploadStatus" class="upload-status hidden"></div>
+          </section>
+
+          <!-- Training Data Table -->
+          <section class="train-section">
+            <div class="section-header">
+              <h2><i class="fas fa-database"></i> Training Data</h2>
+              <div class="section-actions">
+                <button id="exportBtn" class="btn btn-secondary">
+                  <i class="fas fa-download"></i> Export
+                </button>
+                <button id="retrainBtn" class="btn btn-primary">
+                  <i class="fas fa-sync"></i> Retrain Model
+                </button>
+              </div>
+            </div>
+            <div class="table-container">
+              <table id="trainingTable" class="data-table">
+                <thead>
+                  <tr>
+                    <th>Question</th>
+                    <th>Intent</th>
+                    <th>Source</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="trainingData">
+                  <tr>
+                    <td colspan="4" class="empty-state">Loading...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div id="pagination" class="pagination"></div>
+          </section>
+
+          <!-- Learned Data -->
+          <section class="train-section">
+            <div class="section-header">
+              <h2><i class="fas fa-robot"></i> Self-Learned Data</h2>
+              <button id="promoteLearned" class="btn btn-secondary">
+                <i class="fas fa-level-up-alt"></i> Promote to Training
+              </button>
+            </div>
+            <div class="table-container">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Query</th>
+                    <th>Inferred Intent</th>
+                    <th>Confidence</th>
+                    <th>Verified</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="learnedData">
+                  <tr>
+                    <td colspan="5" class="empty-state">Loading...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+
+        <aside class="train-sidebar">
+          <!-- Stats Card -->
+          <div class="stats-card">
+            <h3><i class="fas fa-chart-pie"></i> Training Statistics</h3>
+            <div id="statsContainer">
+              <div class="stat-row">
+                <span>Total Examples:</span>
+                <span id="totalExamples">-</span>
+              </div>
+              <div class="stat-row">
+                <span>Model Trained:</span>
+                <span id="modelTrained">-</span>
+              </div>
+            </div>
+            <div class="intent-breakdown">
+              <h4>By Intent</h4>
+              <div id="intentBreakdown"></div>
+            </div>
+          </div>
+
+          <!-- Learning Stats -->
+          <div class="stats-card">
+            <h3><i class="fas fa-brain"></i> Self-Learning</h3>
+            <div id="learningStats">
+              <div class="stat-row">
+                <span>Learned Queries:</span>
+                <span id="learnedCount">-</span>
+              </div>
+              <div class="stat-row">
+                <span>Verified:</span>
+                <span id="verifiedCount">-</span>
+              </div>
+              <div class="stat-row">
+                <span>Pending:</span>
+                <span id="pendingCount">-</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick Test -->
+          <div class="test-card">
+            <h3><i class="fas fa-flask"></i> Test Classifier</h3>
+            <input
+              type="text"
+              id="testInput"
+              placeholder="Enter a test query..."
+            />
+            <button id="testBtn" class="btn btn-secondary btn-block">
+              <i class="fas fa-play"></i> Test
+            </button>
+            <div id="testResult" class="test-result hidden"></div>
+          </div>
+        </aside>
+      </div>
+    </main>
+
+    <script src="/js/main.js"></script>
+    <script src="/js/train.js"></script>
+  </body>
+</html>

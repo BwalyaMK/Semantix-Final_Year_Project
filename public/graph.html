@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Knowledge Graph - Semantix</title>
+    <link rel="stylesheet" href="/css/style.css" />
+    <link rel="stylesheet" href="/css/graph.css" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+    <script src="https://unpkg.com/cytoscape@3.26.0/dist/cytoscape.min.js"></script>
+  </head>
+  <body>
+    <nav class="navbar">
+      <div class="nav-brand">
+        <i class="fas fa-brain"></i>
+        <span>Semantix</span>
+      </div>
+      <div class="nav-links">
+        <a href="/"><i class="fas fa-home"></i> Home</a>
+        <a href="/search.html"><i class="fas fa-search"></i> Search</a>
+        <a href="/chat.html"><i class="fas fa-comments"></i> Ask</a>
+        <a href="/graph.html" class="active"
+          ><i class="fas fa-project-diagram"></i> Graph</a
+        >
+        <a href="/train.html"><i class="fas fa-graduation-cap"></i> Train</a>
+      </div>
+      <div class="nav-auth" id="authSection">
+        <a href="/login.html" class="btn btn-outline">Login</a>
+      </div>
+    </nav>
+
+    <main class="graph-page">
+      <div class="graph-header">
+        <h1>Knowledge Graph Explorer</h1>
+        <div class="search-box">
+          <input
+            type="text"
+            id="graphQuery"
+            placeholder="Enter a topic to explore..."
+          />
+          <button id="buildGraphBtn" class="btn btn-primary">
+            <i class="fas fa-project-diagram"></i> Build Graph
+          </button>
+        </div>
+      </div>
+
+      <div class="graph-layout">
+        <div class="graph-main">
+          <div class="graph-toolbar">
+            <div class="toolbar-group">
+              <button id="zoomIn" class="tool-btn" title="Zoom In">
+                <i class="fas fa-search-plus"></i>
+              </button>
+              <button id="zoomOut" class="tool-btn" title="Zoom Out">
+                <i class="fas fa-search-minus"></i>
+              </button>
+              <button id="fitGraph" class="tool-btn" title="Fit to View">
+                <i class="fas fa-expand"></i>
+              </button>
+              <button id="resetGraph" class="tool-btn" title="Reset Layout">
+                <i class="fas fa-redo"></i>
+              </button>
+            </div>
+            <div class="toolbar-group">
+              <label class="threshold-control">
+                <span>Similarity Threshold:</span>
+                <input
+                  type="range"
+                  id="edgeThreshold"
+                  min="0"
+                  max="100"
+                  value="50"
+                />
+                <span id="thresholdDisplay">0.50</span>
+              </label>
+            </div>
+            <div class="toolbar-group">
+              <select id="layoutSelect">
+                <option value="cose">Force-Directed</option>
+                <option value="circle">Circle</option>
+                <option value="grid">Grid</option>
+                <option value="concentric">Concentric</option>
+              </select>
+            </div>
+          </div>
+
+          <div id="cyContainer" class="cy-container">
+            <div class="graph-placeholder">
+              <i class="fas fa-project-diagram"></i>
+              <p>Enter a query to build a knowledge graph</p>
+            </div>
+          </div>
+
+          <div class="graph-legend">
+            <div class="legend-item">
+              <span class="legend-dot primary"></span>
+              <span>Primary Results</span>
+            </div>
+            <div class="legend-item">
+              <span class="legend-dot related"></span>
+              <span>Related Papers</span>
+            </div>
+            <div class="legend-item">
+              <span class="legend-line"></span>
+              <span>Similarity Connection</span>
+            </div>
+          </div>
+        </div>
+
+        <aside class="graph-sidebar">
+          <div class="stats-panel">
+            <h3><i class="fas fa-chart-bar"></i> Graph Stats</h3>
+            <div class="stat-item">
+              <span class="stat-label">Nodes:</span>
+              <span id="nodeCount" class="stat-value">0</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Edges:</span>
+              <span id="edgeCount" class="stat-value">0</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Primary:</span>
+              <span id="primaryCount" class="stat-value">0</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Related:</span>
+              <span id="relatedCount" class="stat-value">0</span>
+            </div>
+          </div>
+
+          <div class="details-panel">
+            <h3><i class="fas fa-info-circle"></i> Selected Paper</h3>
+            <div id="paperDetails" class="paper-details">
+              <p class="empty-state">Click a node to see details</p>
+            </div>
+          </div>
+
+          <div class="related-panel">
+            <h3><i class="fas fa-list"></i> Top 10 Related</h3>
+            <div id="relatedList" class="related-list">
+              <p class="empty-state">Build a graph to see related papers</p>
+            </div>
+          </div>
+        </aside>
+      </div>
+
+      <div id="loadingOverlay" class="loading-overlay hidden">
+        <div class="spinner"></div>
+        <p>Building knowledge graph...</p>
+      </div>
+    </main>
+
+    <script src="/js/main.js"></script>
+    <script src="/js/graph.js"></script>
+  </body>
+</html>

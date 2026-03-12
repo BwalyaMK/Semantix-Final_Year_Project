@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ask - Semantix</title>
+    <link rel="stylesheet" href="/css/style.css" />
+    <link rel="stylesheet" href="/css/chat.css" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+    <script src="https://unpkg.com/cytoscape@3.26.0/dist/cytoscape.min.js"></script>
+  </head>
+  <body>
+    <nav class="navbar">
+      <div class="nav-brand">
+        <i class="fas fa-brain"></i>
+        <span>Semantix</span>
+      </div>
+      <div class="nav-links">
+        <a href="/"><i class="fas fa-home"></i> Home</a>
+        <a href="/search.html"><i class="fas fa-search"></i> Search</a>
+        <a href="/chat.html" class="active"
+          ><i class="fas fa-comments"></i> Ask</a
+        >
+        <a href="/graph.html"><i class="fas fa-project-diagram"></i> Graph</a>
+        <a href="/train.html"><i class="fas fa-graduation-cap"></i> Train</a>
+      </div>
+      <div class="nav-auth" id="authSection">
+        <a href="/login.html" class="btn btn-outline">Login</a>
+      </div>
+    </nav>
+
+    <main class="chat-page">
+      <div class="chat-container">
+        <div class="chat-main">
+          <div class="chat-header">
+            <h1>Ask a Question</h1>
+            <p>
+              Get answers from academic papers across 15+ technology domains
+            </p>
+          </div>
+
+          <div class="question-box">
+            <textarea
+              id="questionInput"
+              placeholder="Ask your question here... e.g., 'What is the best approach to implement microservices?'"
+            ></textarea>
+            <div class="question-actions">
+              <label class="toggle-label">
+                <input type="checkbox" id="includeGraph" checked />
+                Include similarity graph
+              </label>
+              <button id="askBtn" class="btn btn-primary">
+                <i class="fas fa-paper-plane"></i> Ask
+              </button>
+            </div>
+          </div>
+
+          <div id="answerSection" class="answer-section hidden">
+            <div class="intent-info">
+              <span class="intent-label">Intent:</span>
+              <span id="detectedIntent" class="intent-badge">-</span>
+              <span id="confidenceInfo" class="confidence-info"></span>
+            </div>
+
+            <div id="summarySection" class="summary-section">
+              <div class="summary-header">
+                <i class="fas fa-lightbulb"></i>
+                <span>Summary</span>
+              </div>
+              <div id="summaryText" class="summary-text"></div>
+              <div id="keyPoints" class="key-points"></div>
+            </div>
+
+            <h2>Top Matching Papers</h2>
+            <div id="answersContainer" class="answers-container"></div>
+          </div>
+
+          <div id="loadingIndicator" class="loading hidden">
+            <div class="spinner"></div>
+            <p>Thinking...</p>
+          </div>
+        </div>
+
+        <div class="chat-sidebar">
+          <div class="graph-panel">
+            <div class="panel-header">
+              <h3><i class="fas fa-project-diagram"></i> Similarity Graph</h3>
+              <div class="graph-controls">
+                <button id="expandGraphBtn" class="btn btn-sm" style="display: none;" title="Expand to full view">
+                  <i class="fas fa-expand-arrows-alt"></i> Expand
+                </button>
+                <label>
+                  Threshold:
+                  <input
+                    type="range"
+                    id="thresholdSlider"
+                    min="0"
+                    max="100"
+                    value="50"
+                  />
+                  <span id="thresholdValue">0.5</span>
+                </label>
+              </div>
+            </div>
+            <div id="graphContainer" class="graph-container">
+              <div class="graph-placeholder">
+                <i class="fas fa-project-diagram"></i>
+                <p>Graph will appear here after asking a question</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="related-panel">
+            <h3><i class="fas fa-link"></i> Top 10 Related Papers</h3>
+            <div id="relatedList" class="related-list">
+              <p class="empty-state">Ask a question to see related papers</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Feedback Modal -->
+      <div id="feedbackModal" class="modal hidden">
+        <div class="modal-content">
+          <h3>Help Improve Results</h3>
+          <p>
+            The system wasn't confident about the intent. Please confirm or
+            correct:
+          </p>
+          <div class="feedback-options">
+            <label><input type="radio" name="feedbackIntent" value="software_engineering" /> Software Engineering</label>
+            <label><input type="radio" name="feedbackIntent" value="cloud" /> Cloud</label>
+            <label><input type="radio" name="feedbackIntent" value="devops" /> DevOps</label>
+            <label><input type="radio" name="feedbackIntent" value="ai_ml" /> AI/ML</label>
+            <label><input type="radio" name="feedbackIntent" value="general" /> General</label>
+            <label><input type="radio" name="feedbackIntent" value="cybersecurity" /> Cybersecurity</label>
+            <label><input type="radio" name="feedbackIntent" value="database" /> Database</label>
+            <label><input type="radio" name="feedbackIntent" value="networking" /> Networking</label>
+            <label><input type="radio" name="feedbackIntent" value="mobile_development" /> Mobile Development</label>
+            <label><input type="radio" name="feedbackIntent" value="web_development" /> Web Development</label>
+            <label><input type="radio" name="feedbackIntent" value="data_science" /> Data Science</label>
+            <label><input type="radio" name="feedbackIntent" value="blockchain" /> Blockchain</label>
+            <label><input type="radio" name="feedbackIntent" value="emerging_tech" /> Emerging Tech</label>
+            <label><input type="radio" name="feedbackIntent" value="it_management" /> IT Management</label>
+            <label><input type="radio" name="feedbackIntent" value="systems" /> Systems</label>
+          </div>
+          <div class="modal-actions">
+            <button id="skipFeedback" class="btn btn-secondary">Skip</button>
+            <button id="submitFeedback" class="btn btn-primary">Submit</button>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <script src="/js/main.js"></script>
+    <script src="/js/chat.js"></script>
+  </body>
+</html>
