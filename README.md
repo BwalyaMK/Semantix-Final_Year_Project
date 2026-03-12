@@ -1,4 +1,4 @@
-# Semantix - Semantic Academic Search Platform
+# Semantix - A Semantic Academic Search Platform
 
 A semantic search and knowledge graph application for exploring academic papers across software engineering, cloud computing, DevOps, and AI/ML domains. Built with Flask and transformer-based embeddings, Semantix classifies user queries by intent and retrieves relevant papers from OpenAlex, re-ranking results using semantic similarity and visualising paper relationships as an interactive knowledge graph.
 
